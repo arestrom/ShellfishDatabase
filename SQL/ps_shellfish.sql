@@ -8,12 +8,13 @@
 -- 5. Add beach to location_type_lut
 -- 6. Add management_region to location_type_lut
 -- 7. Add shellfish_management_area to location_type_lut
+-- 8. Add intertidal_area to location_type_lut
 
--- Standards: 
+-- WA State Standards: 
 -- Dept of Ecology (2927: https://ecology.wa.gov/Research-Data/Data-resources/Geographic-Information-Systems-GIS/Standards)
 -- DNR apparently posts in both SPS 2927 and web mercator 3857
-
--- Create extensions (Query window on database shellfish) -------------------
+-- Selecting 4326 based on simplicity in understanding coordinates. Relatively small amount of data, so probably no big
+--  performance hit
 
 COMMENT ON DATABASE ps_shellfish
     IS 'Database for Puget Sound Shellfish Unit';
@@ -217,7 +218,7 @@ CREATE INDEX location_coordinates_gix ON location_coordinates USING GIST (geog);
 CREATE TABLE location_boundary (
     location_boundary_id uuid DEFAULT gen_random_uuid() NOT NULL,
     location_id uuid NOT NULL,
-    boundary_id integer NOT NULL,
+    boundary_code text NOT NULL,
     boundary_name text NOT NULL,
     active_datetime timestamptz(6),
     inactive_datetime timestamptz(6),
@@ -238,7 +239,7 @@ CREATE INDEX location_boundary_gix ON location_boundary USING GIST (geog);
 CREATE TABLE location_route (
     location_route_id uuid DEFAULT gen_random_uuid() NOT NULL,
     location_id uuid NOT NULL,
-    route_id integer NOT NULL,
+    route_code text NOT NULL,
     route_name text NOT NULL,
     active_datetime timestamptz(6),
     inactive_datetime timestamptz(6),
@@ -336,7 +337,7 @@ ALTER TABLE ONLY media_type_lut
 CREATE TABLE mean_effort_estimate (
     mean_effort_estimate_id uuid DEFAULT gen_random_uuid() NOT NULL,
     beach_id uuid NOT NULL,
-    beach_number integer NOT NULL,
+    beach_code text NOT NULL,
     beach_name text NOT NULL,
     estimation_year integer NOT NULL,
     tide_strata text NOT NULL,
@@ -355,7 +356,7 @@ ALTER TABLE ONLY mean_effort_estimate
 CREATE TABLE mean_cpue_estimate (
     mean_cpue_estimate_id uuid DEFAULT gen_random_uuid() NOT NULL,
     beach_id uuid NOT NULL,
-    beach_number integer NOT NULL,
+    beach_code text NOT NULL,
     beach_name text NOT NULL,
     estimation_year integer NOT NULL,
     flight_season text NOT NULL,
@@ -571,8 +572,7 @@ CREATE TABLE survey (
     survey_id uuid DEFAULT gen_random_uuid() NOT NULL,
     survey_type_id uuid NOT NULL,
     sampling_program_id uuid NOT NULL,
-    beach_id uuid,
-    point_location_id uuid,
+    location_id uuid,
     area_surveyed_id uuid, 
     data_review_status_id uuid NOT NULL,
     survey_completion_status_id uuid NOT NULL,
@@ -698,211 +698,250 @@ ALTER TABLE ONLY tide_strata_lut
 -- Set foreign keys ------------------------------------------------------
     
 ALTER TABLE ONLY egress_model
-    ADD CONSTRAINT fk_egress_model_version__egress_model FOREIGN KEY (egress_model_version_id) REFERENCES egress_model_version(egress_model_version_id);
+    ADD CONSTRAINT fk_egress_model_version__egress_model FOREIGN KEY (egress_model_version_id) REFERENCES egress_model_version (egress_model_version_id);
+
+------------------------
 
 ALTER TABLE ONLY egress_model_version
-    ADD CONSTRAINT fk_egress_model_type_lut__egress_model_version FOREIGN KEY (egress_model_type_id) REFERENCES egress_model_type_lut(egress_model_type_id);
+    ADD CONSTRAINT fk_egress_model_type_lut__egress_model_version FOREIGN KEY (egress_model_type_id) REFERENCES egress_model_type_lut (egress_model_type_id);
     
 ALTER TABLE ONLY egress_model_version
-    ADD CONSTRAINT fk_tide_strata_lut__egress_model_version FOREIGN KEY (tide_strata_id) REFERENCES tide_strata_lut(tide_strata_id);
+    ADD CONSTRAINT fk_tide_strata_lut__egress_model_version FOREIGN KEY (tide_strata_id) REFERENCES tide_strata_lut (tide_strata_id);
+
+------------------------
 
 ALTER TABLE ONLY individual_species
-    ADD CONSTRAINT fk_species_encounter__individual_species FOREIGN KEY (species_encounter_id) REFERENCES species_encounter(species_encounter_id);
+    ADD CONSTRAINT fk_species_encounter__individual_species FOREIGN KEY (species_encounter_id) REFERENCES species_encounter (species_encounter_id);
     
 ALTER TABLE ONLY individual_species
-    ADD CONSTRAINT fk_sex_lut__individual_species FOREIGN KEY (sex_id) REFERENCES sex_lut(sex_id);
+    ADD CONSTRAINT fk_sex_lut__individual_species FOREIGN KEY (sex_id) REFERENCES sex_lut (sex_id);
+
+------------------------
 
 ALTER TABLE ONLY location
-    ADD CONSTRAINT fk_location_type_lut__location FOREIGN KEY (location_type_id) REFERENCES location_type_lut(location_type_id);
+    ADD CONSTRAINT fk_location_type_lut__location FOREIGN KEY (location_type_id) REFERENCES location_type_lut (location_type_id);
 
+------------------------
 
+ALTER TABLE ONLY location_coordinates
+    ADD CONSTRAINT fk_location__location_coordinates FOREIGN KEY (location_id) REFERENCES location (location_id);
 
+------------------------
 
+ALTER TABLE ONLY location_boundary
+    ADD CONSTRAINT fk_location__location_boundary FOREIGN KEY (location_id) REFERENCES location (location_id);
 
+------------------------
+    
+ALTER TABLE ONLY location_route
+    ADD CONSTRAINT fk_location__location_route FOREIGN KEY (location_id) REFERENCES location (location_id);
 
+------------------------
 
+ALTER TABLE ONLY location_inventory
+    ADD CONSTRAINT fk_location__location_inventory FOREIGN KEY (location_id) REFERENCES location (location_id);
+    
+ALTER TABLE ONLY location_inventory
+    ADD CONSTRAINT fk_survey_type_lut__location_inventory FOREIGN KEY (survey_type_id) REFERENCES survey_type_lut (survey_type_id);
+    
+ALTER TABLE ONLY location_inventory
+    ADD CONSTRAINT fk_species_lut__location_inventory FOREIGN KEY (species_id) REFERENCES species_lut (species_id);
 
-ALTER TABLE ONLY beach
-    ADD CONSTRAINT fk_point_location__beach FOREIGN KEY (tide_station_location_id) REFERENCES point_location(point_location_id);
+------------------------
 
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_beach__beach_allowance FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_location__location_quota FOREIGN KEY (location_id) REFERENCES location (location_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_beach_status_lut__beach_allowance FOREIGN KEY (beach_status_id) REFERENCES beach_status_lut(beach_status_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_regulatory_status_lut__location_quota FOREIGN KEY (regulatory_status_id) REFERENCES regulatory_status_lut (regulatory_status_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_effort_estimate_type_lut__beach_allowance FOREIGN KEY (effort_estimate_type_id) REFERENCES effort_estimate_type_lut(effort_estimate_type_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_effort_estimate_type_lut__location_quota FOREIGN KEY (effort_estimate_type_id) REFERENCES effort_estimate_type_lut (effort_estimate_type_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_egress_model_type_lut__beach_allowance FOREIGN KEY (egress_model_type_id) REFERENCES egress_model_type_lut(egress_model_type_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_egress_model_type_lut__location_quota FOREIGN KEY (egress_model_type_id) REFERENCES egress_model_type_lut (egress_model_type_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_species_group_lut__beach_allowance FOREIGN KEY (species_group_id) REFERENCES species_group_lut(species_group_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_species_group_lut__location_quota FOREIGN KEY (species_group_id) REFERENCES species_group_lut (species_group_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_report_type_lut__beach_allowance FOREIGN KEY (report_type_id) REFERENCES report_type_lut(report_type_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_report_type_lut__location_quota FOREIGN KEY (report_type_id) REFERENCES report_type_lut (report_type_id);
     
-ALTER TABLE ONLY beach_allowance
-    ADD CONSTRAINT fk_harvest_unit_type_lut__beach_allowance FOREIGN KEY (harvest_unit_type_id) REFERENCES harvest_unit_type_lut(harvest_unit_type_id);
-    
-ALTER TABLE ONLY beach_boundary_history
-    ADD CONSTRAINT fk_beach__beach_boundary_history FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+ALTER TABLE ONLY location_quota
+    ADD CONSTRAINT fk_harvest_unit_type_lut__location_quota FOREIGN KEY (harvest_unit_type_id) REFERENCES harvest_unit_type_lut (harvest_unit_type_id);
 
-ALTER TABLE ONLY beach_boundary_history
-    ADD CONSTRAINT fk_survey_type_lut__beach_boundary_history FOREIGN KEY (survey_type_id) REFERENCES survey_type_lut(survey_type_id);
+------------------------
     
-ALTER TABLE ONLY beach_intertidal_area
-    ADD CONSTRAINT fk_beach__beach_intertidal_area FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+ALTER TABLE ONLY media_location
+    ADD CONSTRAINT fk_location__media_location FOREIGN KEY (location_id) REFERENCES location (location_id);
+	
+ALTER TABLE ONLY media_location
+    ADD CONSTRAINT fk_media_type_lut__media_location FOREIGN KEY (media_type_id) REFERENCES media_type_lut (media_type_id);
     
-ALTER TABLE ONLY beach_inventory
-    ADD CONSTRAINT fk_beach__beach_inventory FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
-    
-ALTER TABLE ONLY beach_inventory
-    ADD CONSTRAINT fk_survey_type_lut__beach_inventory FOREIGN KEY (survey_type_id) REFERENCES survey_type_lut(survey_type_id);
-    
-ALTER TABLE ONLY beach_inventory
-    ADD CONSTRAINT fk_species_lut__beach_inventory FOREIGN KEY (species_id) REFERENCES species_lut(species_id);
+------------------------
 
-ALTER TABLE ONLY beach_season
-    ADD CONSTRAINT fk_beach__beach_season FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+ALTER TABLE ONLY mean_effort_estimate
+    ADD CONSTRAINT fk_location__mean_effort_estimate FOREIGN KEY (location_id) REFERENCES location (location_id);
     
-ALTER TABLE ONLY beach_season
-    ADD CONSTRAINT fk_season_status_lut__beach_season FOREIGN KEY (season_status_id) REFERENCES season_status_lut(season_status_id);
+ALTER TABLE ONLY mean_cpue_estimate
+    ADD CONSTRAINT fk_location__mean_cpue_estimate FOREIGN KEY (location_id) REFERENCES location (location_id);
     
-ALTER TABLE ONLY beach_season
-    ADD CONSTRAINT fk_species_group_lut__beach_season FOREIGN KEY (species_group_id) REFERENCES species_group_lut(species_group_id);
+------------------------
 
-
-
-    
 ALTER TABLE ONLY mobile_device
-    ADD CONSTRAINT fk_mobile_device_type_lut__mobile_device FOREIGN KEY (mobile_device_type_id) REFERENCES mobile_device_type_lut(mobile_device_type_id);
+    ADD CONSTRAINT fk_mobile_device_type_lut__mobile_device FOREIGN KEY (mobile_device_type_id) REFERENCES mobile_device_type_lut (mobile_device_type_id);
+    
+------------------------
 
 ALTER TABLE ONLY mobile_survey_form
-    ADD CONSTRAINT fk_survey__mobile_survey_form FOREIGN KEY (survey_id) REFERENCES survey(survey_id);
+    ADD CONSTRAINT fk_survey__mobile_survey_form FOREIGN KEY (survey_id) REFERENCES survey (survey_id);
+
+------------------------
+
+ALTER TABLE ONLY sampling_program_lut
+    ADD CONSTRAINT fk_agency_lut__sampling_program_lut FOREIGN KEY (agency_id) REFERENCES agency_lut (agency_id);
+
+------------------------
+
+ALTER TABLE ONLY season
+    ADD CONSTRAINT fk_location__season FOREIGN KEY (location_id) REFERENCES location (location_id);
     
-ALTER TABLE ONLY point_location
-    ADD CONSTRAINT fk_beach__point_location FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+ALTER TABLE ONLY season
+    ADD CONSTRAINT fk_season_status_lut__season FOREIGN KEY (season_status_id) REFERENCES season_status_lut (season_status_id);
+    
+ALTER TABLE ONLY season
+    ADD CONSTRAINT fk_species_group_lut__season FOREIGN KEY (species_group_id) REFERENCES species_group_lut (species_group_id);
 
-
+------------------------
 
 ALTER TABLE ONLY species_encounter
-    ADD CONSTRAINT fk_survey_event__species_encounter FOREIGN KEY (survey_event_id) REFERENCES survey_event(survey_event_id);
+    ADD CONSTRAINT fk_survey_event__species_encounter FOREIGN KEY (survey_event_id) REFERENCES survey_event (survey_event_id);
     
 ALTER TABLE ONLY species_encounter
-    ADD CONSTRAINT fk_species_lut__species_encounter FOREIGN KEY (species_id) REFERENCES species_lut(species_id);
+    ADD CONSTRAINT fk_species_lut__species_encounter FOREIGN KEY (species_id) REFERENCES species_lut (species_id);
     
 ALTER TABLE ONLY species_encounter
-    ADD CONSTRAINT fk_point_location__species_encounter FOREIGN KEY (species_location_id) REFERENCES point_location(point_location_id);
+    ADD CONSTRAINT fk_location__species_encounter FOREIGN KEY (species_location_id) REFERENCES location (location_id);
     
 ALTER TABLE ONLY species_encounter
-    ADD CONSTRAINT fk_catch_result_type_lut__species_encounter FOREIGN KEY (catch_result_type_id) REFERENCES catch_result_type_lut(catch_result_type_id);
+    ADD CONSTRAINT fk_catch_result_type_lut__species_encounter FOREIGN KEY (catch_result_type_id) REFERENCES catch_result_type_lut (catch_result_type_id);
     
 ALTER TABLE ONLY species_encounter
-    ADD CONSTRAINT fk_shell_condition_lut__species_encounter FOREIGN KEY (shell_condition_id) REFERENCES shell_condition_lut(shell_condition_id);
+    ADD CONSTRAINT fk_shell_condition_lut__species_encounter FOREIGN KEY (shell_condition_id) REFERENCES shell_condition_lut (shell_condition_id);
+
+------------------------
 
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_survey_type_lut__survey FOREIGN KEY (survey_type_id) REFERENCES survey_type_lut(survey_type_id);
+    ADD CONSTRAINT fk_survey_type_lut__survey FOREIGN KEY (survey_type_id) REFERENCES survey_type_lut (survey_type_id);
 
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_sampling_program_lut__survey FOREIGN KEY (sampling_program_id) REFERENCES sampling_program_lut(sampling_program_id);
+    ADD CONSTRAINT fk_sampling_program_lut__survey FOREIGN KEY (sampling_program_id) REFERENCES sampling_program_lut (sampling_program_id);
 
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_beach__survey FOREIGN KEY (beach_id) REFERENCES beach(beach_id);
+    ADD CONSTRAINT fk_location__survey FOREIGN KEY (location_id) REFERENCES location (location_id);
     
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_point_location__survey FOREIGN KEY (point_location_id) REFERENCES point_location(point_location_id);
-    
-ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_area_surveyed_lut__survey FOREIGN KEY (area_surveyed_id) REFERENCES area_surveyed_lut(area_surveyed_id);
+    ADD CONSTRAINT fk_area_surveyed_lut__survey FOREIGN KEY (area_surveyed_id) REFERENCES area_surveyed_lut (area_surveyed_id);
 
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_data_review_status_lut__survey FOREIGN KEY (data_review_status_id) REFERENCES data_review_status_lut(data_review_status_id);
+    ADD CONSTRAINT fk_data_review_status_lut__survey FOREIGN KEY (data_review_status_id) REFERENCES data_review_status_lut (data_review_status_id);
     
 ALTER TABLE ONLY survey
-    ADD CONSTRAINT fk_survey_completion_status_lut__survey FOREIGN KEY (survey_completion_status_id) REFERENCES survey_completion_status_lut(survey_completion_status_id);
+    ADD CONSTRAINT fk_survey_completion_status_lut__survey FOREIGN KEY (survey_completion_status_id) REFERENCES survey_completion_status_lut (survey_completion_status_id);
+
+------------------------
 
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_survey__survey_event FOREIGN KEY (survey_id) REFERENCES survey(survey_id);
+    ADD CONSTRAINT fk_survey__survey_event FOREIGN KEY (survey_id) REFERENCES survey (survey_id);
 
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_point_location__survey_event FOREIGN KEY (event_location_id) REFERENCES point_location(point_location_id);
+    ADD CONSTRAINT fk_location__survey_event FOREIGN KEY (event_location_id) REFERENCES location (location_id);
     
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_harvester_type_lut__survey_event FOREIGN KEY (harvester_type_id) REFERENCES harvester_type_lut(harvester_type_id);
+    ADD CONSTRAINT fk_harvester_type_lut__survey_event FOREIGN KEY (harvester_type_id) REFERENCES harvester_type_lut (harvester_type_id);
 
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_harvest_method_lut__survey_event FOREIGN KEY (harvest_method_id) REFERENCES harvest_method_lut(harvest_method_id);
+    ADD CONSTRAINT fk_harvest_method_lut__survey_event FOREIGN KEY (harvest_method_id) REFERENCES harvest_method_lut (harvest_method_id);
     
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_harvest_gear_type_lut__survey_event FOREIGN KEY (harvest_gear_type_id) REFERENCES harvest_gear_type_lut(harvest_gear_type_id);
+    ADD CONSTRAINT fk_harvest_gear_type_lut__survey_event FOREIGN KEY (harvest_gear_type_id) REFERENCES harvest_gear_type_lut (harvest_gear_type_id);
     
 ALTER TABLE ONLY survey_event
-    ADD CONSTRAINT fk_harvest_depth_range_lut__survey_event FOREIGN KEY (harvest_depth_range_id) REFERENCES harvest_depth_range_lut(harvest_depth_range_id);
+    ADD CONSTRAINT fk_harvest_depth_range_lut__survey_event FOREIGN KEY (harvest_depth_range_id) REFERENCES harvest_depth_range_lut (harvest_depth_range_id);
+
+------------------------
 
 ALTER TABLE ONLY survey_mobile_device
-    ADD CONSTRAINT fk_survey__survey_mobile_device FOREIGN KEY (survey_id) REFERENCES survey(survey_id);
+    ADD CONSTRAINT fk_survey__survey_mobile_device FOREIGN KEY (survey_id) REFERENCES survey (survey_id);
 
-ALTER TABLE ONLY survey_mobile_device
-    ADD CONSTRAINT fk_mobile_device__survey_mobile_device FOREIGN KEY (mobile_device_id) REFERENCES mobile_device(mobile_device_id);
-
-ALTER TABLE ONLY survey_sampler
-    ADD CONSTRAINT fk_survey__survey_sampler FOREIGN KEY (survey_id) REFERENCES survey(survey_id);
+------------------------
 
 ALTER TABLE ONLY survey_sampler
-    ADD CONSTRAINT fk_sampler__survey_sampler FOREIGN KEY (sampler_id) REFERENCES sampler(sampler_id);
+    ADD CONSTRAINT fk_survey__survey_sampler FOREIGN KEY (survey_id) REFERENCES survey (survey_id);
+
+------------------------
 
 ALTER TABLE ONLY tide
-    ADD CONSTRAINT fk_tide_strata_lut__tide FOREIGN KEY (tide_strata_id) REFERENCES tide_strata_lut(tide_strata_id);
+    ADD CONSTRAINT fk_tide_strata_lut__tide FOREIGN KEY (tide_strata_id) REFERENCES tide_strata_lut (tide_strata_id);
     
 ALTER TABLE ONLY tide
-    ADD CONSTRAINT fk_point_location__tide FOREIGN KEY (tide_station_location_id) REFERENCES point_location(point_location_id);
+    ADD CONSTRAINT fk_location__tide FOREIGN KEY (tide_station_location_id) REFERENCES location (location_id);
+
+------------------------
+
+ALTER TABLE ONLY tide_correction
+    ADD CONSTRAINT fk_location__tide_correction FOREIGN KEY (location_id) REFERENCES location (location_id);
+    
+ALTER TABLE ONLY tide_correction
+    ADD CONSTRAINT fk_station_location__tide_correction FOREIGN KEY (tide_station_location_id) REFERENCES location (location_id);
+
+------------------------
     
 -- Add normal indexes
 
--- point_location
-CREATE INDEX point_location_beach_idx ON point_location (beach_id);
+-- individual_species
+CREATE INDEX individual_species_species_encounter_idx ON individual_species (species_encounter_id);
 
--- survey
-CREATE INDEX survey_beach_idx ON survey (beach_id);
-CREATE INDEX survey_point_location_idx ON survey (point_location_id);
-CREATE INDEX survey_survey_datetime_idx ON survey ( date(timezone('UTC', survey_datetime)) );
+-- location_coordinates
+CREATE INDEX location_coordinates_location_idx ON location_coordinates (location_id);
+
+-- location_boundary
+CREATE INDEX location_boundary_location_idx ON location_boundary (location_id);
+
+-- location_route
+CREATE INDEX location_route_location_idx ON location_route (location_id);
+
+-- location_inventory
+CREATE INDEX location_inventory_location_idx ON location_inventory (location_id);
+
+-- location_quota
+CREATE INDEX location_quota_location_idx ON location_quota (location_id);
+
+-- media_location
+CREATE INDEX media_location_location_idx ON media_location (location_id);
 
 -- mobile_survey_form
 CREATE INDEX mobile_survey_form_survey_idx ON mobile_survey_form (survey_id);
 
--- survey_event
-CREATE INDEX survey_event_survey_idx ON survey_event (survey_id);
-CREATE INDEX survey_event_event_location_idx ON survey_event (event_location_id);
+-- season
+CREATE INDEX season_location_idx ON season (location_id);
 
 -- species_encounter
 CREATE INDEX species_encounter_survey_event_idx ON species_encounter (survey_event_id);
 CREATE INDEX species_encounter_species_location_idx ON species_encounter (species_location_id);
 
--- individual_species
-CREATE INDEX individual_species_species_encounter_idx ON individual_species (species_encounter_id);
+-- survey
+CREATE INDEX survey_location_idx ON survey (location_id);
+CREATE INDEX survey_survey_datetime_idx ON survey ( date(timezone('UTC', survey_datetime)) );
 
--- beach
-CREATE INDEX beach_tide_station_location_idx ON beach (tide_station_location_id);
+-- survey_event
+CREATE INDEX survey_event_survey_idx ON survey_event (survey_id);
+CREATE INDEX survey_event_event_location_idx ON survey_event (event_location_id);
 
--- beach_allowance
-CREATE INDEX beach_allowance_beach_idx ON beach_allowance (beach_id);
+-- tide_correction
+CREATE INDEX tide_correction_location_idx ON tide_correction (location_id);
 
--- beach_boundary_history
-CREATE INDEX beach_boundary_history_beach_idx ON beach_boundary_history (beach_id);
 
--- beach_season
-CREATE INDEX beach_season_beach_idx ON beach_season (beach_id);
 
--- Add geometry indexes
 
-CREATE INDEX beach_boundary_history_gix ON beach_boundary_history USING GIST (geom);
 
-CREATE INDEX beach_intertidal_area_gix ON beach_intertidal_area USING GIST (geom);
-
-CREATE INDEX management_region_gix ON management_region_lut USING GIST (geom);
-
-CREATE INDEX point_location_gix ON point_location USING GIST (geom);
-
-CREATE INDEX shellfish_management_area_gix ON shellfish_management_area_lut USING GIST (geom);
