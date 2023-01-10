@@ -103,7 +103,7 @@ COMMENT ON COLUMN location.location_type_id IS 'Type of location (harvester coun
 COMMENT ON COLUMN location.location_code IS 'Short code to identify location';
 COMMENT ON COLUMN location.location_name IS 'Name of location (place name, etc.)';
 COMMENT ON COLUMN location.location_description IS 'Extended description of location';
-COMMENT ON COLUMN point_location.comment_text IS 'Additional comments regarding location';
+COMMENT ON COLUMN location.comment_text IS 'Additional comments regarding location';
 
 -- location_coordinates
 COMMENT ON TABLE public.location_coordinates IS 'Spatial table holding coordinates for point location records';
@@ -169,7 +169,7 @@ COMMENT ON COLUMN location_type_lut.location_type_id IS 'Universally unique prim
 COMMENT ON COLUMN location_type_lut.location_type_description IS 'Description of location type';
 
 -- media_location
-COMMENT ON TABLE public.media_location IS 'Identifies where to retrieve media (photo, video, audio files, etc.) recorded at specific locations'
+COMMENT ON TABLE public.media_location IS 'Identifies where to retrieve media (photo, video, audio files, etc.) recorded at specific locations';
 COMMENT ON COLUMN media_location.media_location_id IS 'Universally unique primary key';
 COMMENT ON COLUMN media_location.location_id IS 'Link to the location table';
 COMMENT ON COLUMN media_location.media_type_id IS 'The type of media that was recorded (photo, video, audio, etc.)';
@@ -212,8 +212,6 @@ COMMENT ON COLUMN mobile_device.mobile_device_type_id IS 'Type of device (Pad, G
 COMMENT ON COLUMN mobile_device.mobile_equipment_identifier IS 'Typically the MEID number printed on device';
 COMMENT ON COLUMN mobile_device.mobile_device_name IS 'Name of device';
 COMMENT ON COLUMN mobile_device.mobile_device_description IS 'Description of device';
-COMMENT ON COLUMN mobile_device.active_indicator IS 'Is the device still active and being used?';
-COMMENT ON COLUMN mobile_device.inactive_datetime IS 'Date the device was taken out of service';
 
 -- mobile_device_type_lut
 COMMENT ON TABLE public.mobile_device_type_lut IS 'Type of mobile device';
@@ -224,16 +222,14 @@ COMMENT ON COLUMN mobile_device_type_lut.mobile_device_type_description IS 'Type
 COMMENT ON TABLE public.mobile_survey_form IS 'Table for tracking source of data collected with mobile device';
 COMMENT ON COLUMN mobile_survey_form.mobile_survey_form_id IS 'Universally unique primary key';
 COMMENT ON COLUMN mobile_survey_form.survey_id IS 'Link to survey table';
-COMMENT ON COLUMN mobile_survey_form.parent_form_survey_id IS 'Unique ID (integer) generated in parent form';
-COMMENT ON COLUMN mobile_survey_form.parent_form_survey_guid IS 'GUID generated in parent form';
 COMMENT ON COLUMN mobile_survey_form.parent_form_name IS 'Name of the parent form used to record data';
-COMMENT ON COLUMN mobile_survey_form.parent_form_id IS 'Integer ID of the parent form used to record data';
+COMMENT ON COLUMN mobile_survey_form.parent_form_id IS 'ID of the parent form used to record data';
 
 -- regulatory_status_lut
 COMMENT ON TABLE public.regulatory_status_lut IS 'Regulatory status categories (Active, Passive, etc)';
 COMMENT ON COLUMN regulatory_status_lut.regulatory_status_id IS 'Universally unique primary key';
-COMMENT ON COLUMN regulatory_status_lut.regulator_status_code IS 'Code for the regulatory status categories';
-COMMENT ON COLUMN regulatory_status_lut.regulatory_status_description IS 'Description of the regulatory status categories';
+COMMENT ON COLUMN regulatory_status_lut.status_code IS 'Code for the regulatory status categories';
+COMMENT ON COLUMN regulatory_status_lut.status_description IS 'Description of the regulatory status categories';
 
 -- report_type_lut
 COMMENT ON TABLE public.report_type_lut IS 'Categories of required reporting types (External harvest, Internal effort, etc.)';
