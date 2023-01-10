@@ -23,6 +23,17 @@ COMMENT ON DATABASE ps_shellfish
 
 -- Create tables (Query window on database shellfish) -------------------
 
+CREATE TABLE agency_lut (
+    agency_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    agency_code text NOT NULL,
+    agency_name text NOT NULL,
+    obsolete_flag boolean NOT NULL,
+    obsolete_datetime timestamptz(6)
+);
+
+ALTER TABLE ONLY agency_lut
+    ADD CONSTRAINT pk_agency_lut PRIMARY KEY (agency_id);
+
 CREATE TABLE area_surveyed_lut (
     area_surveyed_id uuid DEFAULT gen_random_uuid() NOT NULL,
     area_surveyed_description text NOT NULL,
@@ -266,7 +277,7 @@ CREATE TABLE location_inventory (
     population_estimate_unit uuid NOT NULL,
     survey_completed_datetime timestamptz NOT NULL,
     population_estimate integer NOT NULL,
-    comment_text character text,
+    comment_text text,
     created_datetime timestamp(6) with time zone DEFAULT now() NOT NULL,
     created_by text NOT NULL,
     modified_datetime timestamptz(6),
@@ -336,9 +347,9 @@ ALTER TABLE ONLY media_type_lut
 
 CREATE TABLE mean_effort_estimate (
     mean_effort_estimate_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    beach_id uuid NOT NULL,
-    beach_code text NOT NULL,
-    beach_name text NOT NULL,
+    location_id uuid NOT NULL,
+    location_code text NOT NULL,
+    location_name text NOT NULL,
     estimation_year integer NOT NULL,
     tide_strata text NOT NULL,
     flight_season text NOT NULL,
@@ -355,9 +366,9 @@ ALTER TABLE ONLY mean_effort_estimate
 
 CREATE TABLE mean_cpue_estimate (
     mean_cpue_estimate_id uuid DEFAULT gen_random_uuid() NOT NULL,
-    beach_id uuid NOT NULL,
-    beach_code text NOT NULL,
-    beach_name text NOT NULL,
+    location_id uuid NOT NULL,
+    location_code text NOT NULL,
+    location_name text NOT NULL,
     estimation_year integer NOT NULL,
     flight_season text NOT NULL,
     species_code text NOT NULL,
@@ -464,6 +475,7 @@ ALTER TABLE ONLY sampling_program_lut
 CREATE TABLE season (
     season_id uuid DEFAULT gen_random_uuid() NOT NULL,
     location_id uuid NOT NULL,
+    season_type_id uuid NOT NULL,
     season_status_id uuid NOT NULL,
     species_group_id uuid NOT NULL,
     season_start_datetime timestamptz(6) NOT NULL,
@@ -533,7 +545,7 @@ CREATE TABLE species_encounter (
     species_count integer NOT NULL,
     species_weight_gram numeric(8,2),
     no_head_indicator boolean NOT NULL, 
-    comment_text character text,
+    comment_text text,
     created_datetime timestamp(6) with time zone DEFAULT now() NOT NULL,
     created_by text NOT NULL,
     modified_datetime timestamptz(6),
@@ -807,6 +819,9 @@ ALTER TABLE ONLY season
     ADD CONSTRAINT fk_location__season FOREIGN KEY (location_id) REFERENCES location (location_id);
     
 ALTER TABLE ONLY season
+    ADD CONSTRAINT fk_season_type_lut__season FOREIGN KEY (season_type_id) REFERENCES season_type_lut (season_type_id);
+    
+ALTER TABLE ONLY season
     ADD CONSTRAINT fk_season_status_lut__season FOREIGN KEY (season_status_id) REFERENCES season_status_lut (season_status_id);
     
 ALTER TABLE ONLY season
@@ -878,6 +893,9 @@ ALTER TABLE ONLY survey_mobile_device
 
 ALTER TABLE ONLY survey_sampler
     ADD CONSTRAINT fk_survey__survey_sampler FOREIGN KEY (survey_id) REFERENCES survey (survey_id);
+    
+ALTER TABLE ONLY survey_sampler
+    ADD CONSTRAINT fk_sampler__survey_sampler FOREIGN KEY (sampler_id) REFERENCES sampler (sampler_id);
 
 ------------------------
 
