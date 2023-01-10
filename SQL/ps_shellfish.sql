@@ -12,7 +12,7 @@
 
 -- WA State Standards: 
 -- Dept of Ecology (2927: https://ecology.wa.gov/Research-Data/Data-resources/Geographic-Information-Systems-GIS/Standards)
--- DNR apparently posts in both SPS 2927 and web mercator 3857
+-- DNR apparently posts in both SPS EPSG:2927 and web mercator EPSG:3857
 -- Selecting 4326 based on simplicity in understanding coordinates. Relatively small amount of data, so probably no big
 --  performance hit
 
